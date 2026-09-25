@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Top Platform Users — Recognition Raffle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="raffle.css?v=20260922-1" />
+</head>
+<body class="is-idle">
+
+  <div class="grid-veil" aria-hidden="true"></div>
+  <div class="orb a" aria-hidden="true"></div>
+  <div class="orb b" aria-hidden="true"></div>
+  <div class="orb c" aria-hidden="true"></div>
+  <div id="bgNames" aria-hidden="true"></div>
+  <canvas id="fx" aria-hidden="true"></canvas>
+
+  <main class="stage">
+    <!-- Header -->
+    <header class="top">
+      <div class="brand">
+        <span class="kicker"><span class="dot"></span> Employee's Recognition Raffle</span>
+        <h1>Top EOAI <span>Users</span></h1>
+        <span class="sub">A live draw celebrating our most active EOAI users</span>
+      </div>
+      <div class="controls">
+        <button class="icon-btn" id="manageBtn" title="Manage participants" aria-label="Manage participants">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
+        </button>
+        <button class="icon-btn" id="fsBtn" title="Presentation mode" aria-label="Toggle presentation mode">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Centre -->
+    <section class="center">
+      <div class="congrats" aria-hidden="true">
+        <span class="trophy">🏆</span>
+        <span class="label">Congratulations!</span>
+      </div>
+
+      <div class="name-wrap">
+        <div class="name placeholder" id="name" role="status" aria-live="polite">Ready to draw</div>
+      </div>
+
+      <div class="winner-tag" aria-hidden="true">Top Platform User Raffle Winner</div>
+
+      <div class="actions" id="actions">
+        <button class="btn primary big" id="startBtn"><span class="spark"></span> Start raffle</button>
+      </div>
+
+      <div class="mode-row">
+        <div class="switch" id="excludeSwitch" role="switch" aria-checked="false" tabindex="0">
+          <span class="track" aria-hidden="true"></span>
+          Exclude previous winners from the next draw
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bottom">
+      <div class="count-pill">
+        <span class="live" aria-hidden="true"></span>
+        Participants <b id="countNum">0</b>
+        <span id="poolNote" style="color:var(--muted);font-size:12.5px"></span>
+      </div>
+      <div class="tagline">Celebrating our most active platform users</div>
+    </footer>
+  </main>
+
+  <!-- Manage participants panel -->
+  <div class="scrim" id="scrim"></div>
+  <aside class="panel" id="panel" aria-label="Manage participants">
+    <div class="panel-head">
+      <div>
+        <h2>Participants</h2>
+        <p>Add or remove names for this session.</p>
+      </div>
+      <button class="icon-btn" id="closePanel" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="panel-add">
+      <input class="field" id="nameInput" placeholder="Add a participant name…" maxlength="48" />
+      <button class="add-btn" id="addBtn" aria-label="Add participant">+</button>
+    </div>
+    <div class="list" id="list"></div>
+    <div class="panel-foot">
+      <button class="btn ghost" id="resetListBtn">Restore original list</button>
+    </div>
+  </aside>
+
+<script src="raffle.js?v=20260922-1"></script>
+</body>
+</html>
