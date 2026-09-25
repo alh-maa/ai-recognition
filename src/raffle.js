@@ -118,7 +118,7 @@ function updateCounts(){
    ============================================================ */
 function buildReel(pool, winner){
   // Fewer, more readable name changes keep the full draw near twelve seconds.
-  const ticks = pool.length <= 2 ? 26 : 40;
+  const ticks = pool.length <= 2 ? 16 : 24;
   let src = shuffle(pool);
   let p = 0;
   const reel = [];
