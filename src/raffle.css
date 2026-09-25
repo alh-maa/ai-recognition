@@ -65,7 +65,8 @@ body{
 }
 .orb{
   position:fixed; border-radius:50%; z-index:0; pointer-events:none;
-  filter:blur(60px); opacity:.5; mix-blend-mode:screen;
+  opacity:.5;
+  will-change:transform;
   animation:drift 26s var(--ease) infinite alternate;
 }
 .orb.a{ width:440px; height:440px; left:-80px; top:-60px;
@@ -83,7 +84,7 @@ body{
   font-family:'Sora',sans-serif; font-weight:500;
   color:var(--sage); opacity:0;
   letter-spacing:.01em;
-  animation:floatName linear infinite;
+  animation:floatName ease-in-out infinite alternate;
   transition:opacity .8s ease;
   will-change:transform,opacity;
 }
@@ -190,14 +191,15 @@ body.is-winner .congrats{ opacity:1; transform:none; }
 /* halo that intensifies as the reel progresses */
 .name-wrap::before{
   content:""; position:absolute; inset:-2px; border-radius:inherit; pointer-events:none;
-  background:radial-gradient(circle at 50% 50%, rgba(91,179,95,calc(.10 + .34*var(--intensity))), transparent 70%);
+  background:radial-gradient(circle at 50% 50%, rgba(91,179,95,.44), transparent 70%);
   opacity:calc(.35 + .65*var(--intensity));
   transition:opacity .2s linear;
 }
 .name-wrap::after{
   content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
-  box-shadow:0 0 calc(20px + 70px*var(--intensity)) rgba(91,179,95,calc(.05 + .35*var(--intensity))) inset;
-  transition:box-shadow .2s linear;
+  box-shadow:0 0 90px rgba(91,179,95,.4) inset;
+  opacity:calc(.12 + .88*var(--intensity));
+  transition:opacity .2s linear;
 }
 body.is-winner .name-wrap{
   border-color:rgba(91,179,95,.55);
@@ -206,11 +208,12 @@ body.is-winner .name-wrap{
     0 0 0 1px rgba(91,179,95,.25),
     0 40px 120px -40px rgba(45,105,48,.8),
     0 0 90px rgba(91,179,95,.35);
-  animation:winnerPulse 2.6s var(--ease) infinite;
+
 }
+body.is-winner .name-wrap::after{ animation:winnerPulse 2.6s var(--ease) infinite; }
 @keyframes winnerPulse{
-  0%,100%{ box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 0 0 1px rgba(91,179,95,.25),0 40px 120px -40px rgba(45,105,48,.8),0 0 70px rgba(91,179,95,.28); }
-  50%{ box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 0 0 1px rgba(91,179,95,.4),0 40px 120px -40px rgba(45,105,48,.9),0 0 110px rgba(91,179,95,.45); }
+  0%,100%{ opacity:.55; }
+  50%{ opacity:1; }
 }
 
 .name{
@@ -219,18 +222,16 @@ body.is-winner .name-wrap{
   letter-spacing:-.02em;
   color:var(--text);
   word-break:break-word;
-  transition:transform .12s ease, filter .12s ease;
+  position:relative;
 }
-.name.cycle{ animation:tick .12s ease-out; }
-@keyframes tick{ from{ transform:scale(.985); filter:blur(.4px);} to{ transform:none; filter:none;} }
 body.is-winner .name{
   color:#fff;
   text-shadow:0 0 40px rgba(91,179,95,.55), 0 0 90px rgba(45,105,48,.4);
   animation:winnerIn .7s var(--ease);
 }
 @keyframes winnerIn{
-  0%{ transform:scale(.7); opacity:0; filter:blur(6px); }
-  60%{ transform:scale(1.06); opacity:1; filter:blur(0); }
+  0%{ transform:scale(.7); opacity:0; }
+  60%{ transform:scale(1.06); opacity:1; }
   100%{ transform:scale(1); }
 }
 .name.placeholder{ color:var(--muted); font-weight:500; }
@@ -368,11 +369,13 @@ body.is-winner .mode-row{ opacity:1; height:auto; }
 /* ============================================================
    REDUCED MOTION
    ============================================================ */
+html.is-hidden *, html.is-hidden *::before, html.is-hidden *::after{
+  animation-play-state:paused !important;
+}
 @media (prefers-reduced-motion:reduce){
-  .orb,.grid-veil{ animation:none !important; }
-  .bg-name{ animation:none !important; }
-  .name.cycle,.name,.name-wrap{ animation:none !important; }
-  /* Keep the name draw animated, including on VDI desktops. */
-  body.is-drawing .name.cycle{ animation:tick .12s ease-out !important; }
-  @keyframes winnerPulse{ 0%,100%,50%{} }
+  *, *::before, *::after{
+    animation:none !important;
+    transition:none !important;
+    scroll-behavior:auto !important;
+  }
 }

@@ -44,6 +44,8 @@ let names = PARTICIPANTS.slice();      // working list (session-editable)
 const winnersHistory = new Set();      // names who have already won
 let excludeWinners = false;            // "Draw Again" mode toggle
 let phase = 'idle';                    // idle | drawing | winner
+let drawFrame = 0;
+let nameAnimation = null;
 let currentWinner = null;
 
 /* ---- Elements ---- */
@@ -59,6 +61,10 @@ const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
 let reduceMotion = motionPreference.matches;
 motionPreference.addEventListener('change', event => {
   reduceMotion = event.matches;
+  if(reduceMotion){
+    nameAnimation?.cancel();
+    stopCelebration();
+  }
 });
 
 /* ---- Active pool (respects the exclude toggle) ---- */
@@ -146,9 +152,7 @@ function buildDelays(n){
   }
   return out;
 }
-const wait = ms => new Promise(r => setTimeout(r, ms));
-
-async function draw(){
+function draw(){
   if(phase === 'drawing') return;
   const pool = activePool();
 
@@ -167,13 +171,37 @@ async function draw(){
   const reel = buildReel(pool, currentWinner);
   const delays = buildDelays(reel.length);
 
-  for(let i = 0; i < reel.length; i++){
-    setName(reel[i]);
-    // Ramp glow/intensity as the reel decelerates.
-    document.documentElement.style.setProperty('--intensity', (i / (reel.length - 1)).toFixed(3));
-    await wait(delays[i]);
-  }
-  reveal(currentWinner);
+  stopCelebration();
+  nameEl.removeAttribute('aria-label');
+  let index = 0;
+  let elapsed = 0;
+  let previous = null;
+  let nextTick = delays[0];
+  setName(reel[0]);
+  const tick = now => {
+    // Pause the draw while hidden; do not race through missed names on return.
+    if(document.hidden){ previous = null; }
+    else {
+      if(previous !== null) elapsed += Math.min(now - previous, 50);
+      previous = now;
+      const oldIndex = index;
+      while(elapsed >= nextTick && index < reel.length - 1){
+        index++;
+        nextTick += delays[index];
+      }
+      if(index !== oldIndex){
+        setName(reel[index]);
+        document.documentElement.style.setProperty('--intensity', (index / (reel.length - 1)).toFixed(3));
+      }
+      if(elapsed >= nextTick){
+        drawFrame = 0;
+        reveal(currentWinner);
+        return;
+      }
+    }
+    drawFrame = requestAnimationFrame(tick);
+  };
+  drawFrame = requestAnimationFrame(tick);
 }
 
 function reveal(winner){
@@ -193,8 +221,12 @@ function reveal(winner){
 function setName(text, isWinner){
   nameEl.classList.remove('placeholder');
   nameEl.textContent = text;
-  if(!isWinner){
-    nameEl.classList.remove('cycle'); void nameEl.offsetWidth; nameEl.classList.add('cycle');
+  nameAnimation?.cancel();
+  if(!isWinner && !reduceMotion){
+    nameAnimation = nameEl.animate([
+      { transform: 'translateY(3px) scale(.985)', opacity: .8 },
+      { transform: 'translateY(0) scale(1)', opacity: 1 },
+    ], { duration: 100, easing: 'ease-out' });
   }
 }
 function setPlaceholder(text){
@@ -226,7 +258,7 @@ function renderWinnerActions(){
     document.documentElement.style.setProperty('--intensity', '0');
     // brief reset of the slot, then straight into the next draw
     setPlaceholder('Drawing…');
-    setTimeout(draw, 120);
+    draw();
   });
 
   const reset = document.createElement('button');
@@ -245,6 +277,10 @@ function renderWinnerActions(){
 }
 
 function resetRaffle(){
+  cancelAnimationFrame(drawFrame);
+  drawFrame = 0;
+  nameAnimation?.cancel();
+  stopCelebration();
   winnersHistory.clear();
   currentWinner = null;
   phase = 'idle';
@@ -280,6 +316,26 @@ const ctx = fx.getContext('2d');
 let dpr = Math.min(window.devicePixelRatio || 1, 2);
 let particles = [];
 let fxRunning = false;
+let fxFrame = 0;
+let fxPrevious = null;
+let fxAccumulator = 0;
+let burstTimers = [];
+
+function stopCelebration(){
+  burstTimers.forEach(clearTimeout);
+  burstTimers = [];
+  cancelAnimationFrame(fxFrame);
+  particles = [];
+  fxRunning = false;
+  fxPrevious = null;
+  fxAccumulator = 0;
+  ctx.clearRect(0, 0, innerWidth, innerHeight);
+}
+
+document.addEventListener('visibilitychange', () => {
+  fxPrevious = null;
+  document.documentElement.classList.toggle('is-hidden', document.hidden);
+});
 
 function sizeCanvas(){
   dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -294,19 +350,16 @@ addEventListener('resize', sizeCanvas);
 const CONFETTI = ['#2D6930','#3F762A','#5BB35F','#7FC983','#86A795','#EAF1EC'];
 
 function celebrate(){
-  if(reduceMotion){ // a single gentle pop rather than a full shower
-    burst(innerWidth/2, innerHeight*0.42, 40, 5);
-    if(!fxRunning) loop();
-    return;
-  }
+  stopCelebration();
+  if(reduceMotion) return;
   const cx = innerWidth / 2, cy = innerHeight * 0.42;
   burst(cx, cy, 150, 13);
-  setTimeout(() => burst(innerWidth*0.2, innerHeight*0.5, 60, 10), 220);
-  setTimeout(() => burst(innerWidth*0.8, innerHeight*0.5, 60, 10), 380);
-  if(!fxRunning) loop();
+  burstTimers.push(setTimeout(() => burst(innerWidth*0.2, innerHeight*0.5, 60, 10), 220));
+  burstTimers.push(setTimeout(() => burst(innerWidth*0.8, innerHeight*0.5, 60, 10), 380));
 }
 
 function burst(x, y, n, spread){
+  if(reduceMotion || document.hidden) return;
   for(let i = 0; i < n; i++){
     const ang = (Math.PI * 2) * (i / n) + Math.random() * 0.5;
     const speed = 4 + Math.random() * spread;
@@ -325,21 +378,39 @@ function burst(x, y, n, spread){
       shape: Math.random() < 0.35 ? 'circle' : 'rect',
     });
   }
+  if(!fxRunning){
+    fxRunning = true;
+    fxPrevious = null;
+    fxFrame = requestAnimationFrame(loop);
+  }
 }
 
-function loop(){
-  fxRunning = true;
+function loop(now){
+  // Fixed 120 Hz simulation keeps speed and lifetime consistent on 60–144 Hz displays.
+  const delta = fxPrevious === null ? 0 : Math.min(now - fxPrevious, 50);
+  fxPrevious = now;
+  fxAccumulator += delta;
+  const step = 1000 / 120;
+  while(fxAccumulator >= step){
+    for(let i = particles.length - 1; i >= 0; i--){
+      const p = particles[i];
+      p.vy += p.g * .5;
+      p.x += p.vx * .5;
+      p.y += p.vy * .5;
+      p.vx *= Math.pow(.99, .5);
+      p.rot += p.vr * .5;
+      p.life -= p.decay * .5;
+      if(p.life <= 0 || p.y > innerHeight + 40) particles.splice(i, 1);
+    }
+    fxAccumulator -= step;
+  }
   ctx.clearRect(0, 0, innerWidth, innerHeight);
   for(let i = particles.length - 1; i >= 0; i--){
     const p = particles[i];
-    p.vy += p.g; p.x += p.vx; p.y += p.vy; p.vx *= 0.99;
-    p.rot += p.vr; p.life -= p.decay;
-    if(p.life <= 0 || p.y > innerHeight + 40){ particles.splice(i, 1); continue; }
     ctx.save();
     ctx.globalAlpha = Math.max(0, p.life);
     ctx.translate(p.x, p.y); ctx.rotate(p.rot);
     ctx.fillStyle = p.color;
-    ctx.shadowColor = p.color; ctx.shadowBlur = 8;
     if(p.shape === 'circle'){
       ctx.beginPath(); ctx.arc(0, 0, p.w/2, 0, Math.PI*2); ctx.fill();
     } else {
@@ -347,7 +418,7 @@ function loop(){
     }
     ctx.restore();
   }
-  if(particles.length){ requestAnimationFrame(loop); }
+  if(particles.length){ fxFrame = requestAnimationFrame(loop); }
   else { ctx.clearRect(0,0,innerWidth,innerHeight); fxRunning = false; }
 }
 
@@ -417,7 +488,7 @@ document.getElementById('resetListBtn').addEventListener('click', () => {
    PRESENTATION (FULLSCREEN) MODE
    ============================================================ */
 document.getElementById('fsBtn').addEventListener('click', () => {
-  if(!document.fullscreenElement){
+  if(!document.fullscreenElement && !document.webkitFullscreenElement){
     (document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen)?.call(document.documentElement);
   } else {
     (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
