@@ -45,7 +45,6 @@ const winnersHistory = new Set();      // names who have already won
 let excludeWinners = false;            // "Draw Again" mode toggle
 let phase = 'idle';                    // idle | drawing | winner
 let drawFrame = 0;
-let nameAnimation = null;
 let currentWinner = null;
 
 /* ---- Elements ---- */
@@ -62,7 +61,6 @@ let reduceMotion = motionPreference.matches;
 motionPreference.addEventListener('change', event => {
   reduceMotion = event.matches;
   if(reduceMotion){
-    nameAnimation?.cancel();
     stopCelebration();
   }
 });
@@ -119,7 +117,8 @@ function updateCounts(){
    THE DRAW
    ============================================================ */
 function buildReel(pool, winner){
-  const ticks = pool.length <= 2 ? 26 : Math.min(58, Math.max(36, pool.length * 3 + 20));
+  // Fewer, more readable name changes keep the full draw near twelve seconds.
+  const ticks = pool.length <= 2 ? 26 : 40;
   let src = shuffle(pool);
   let p = 0;
   const reel = [];
@@ -144,7 +143,7 @@ function buildReel(pool, winner){
 }
 // Ease-out delays: fast → slow, building suspense.
 function buildDelays(n){
-  const minD = 34, maxD = 460, power = 2.35;
+  const minD = 140, maxD = 675, power = 2.35;
   const out = [];
   for(let i = 0; i < n; i++){
     const t = n <= 1 ? 1 : i / (n - 1);
@@ -207,7 +206,7 @@ function draw(){
 function reveal(winner){
   phase = 'winner';
   winnersHistory.add(winner);
-  setName(winner, true);
+  setName(winner);
   document.documentElement.style.setProperty('--intensity', '1');
   body.className = 'is-winner';
   renderWinnerActions();
@@ -218,16 +217,10 @@ function reveal(winner){
 }
 
 /* ---- Name slot helpers ---- */
-function setName(text, isWinner){
+function setName(text){
   nameEl.classList.remove('placeholder');
   nameEl.textContent = text;
-  nameAnimation?.cancel();
-  if(!isWinner && !reduceMotion){
-    nameAnimation = nameEl.animate([
-      { transform: 'translateY(3px) scale(.985)', opacity: .8 },
-      { transform: 'translateY(0) scale(1)', opacity: 1 },
-    ], { duration: 100, easing: 'ease-out' });
-  }
+
 }
 function setPlaceholder(text){
   nameEl.className = 'name placeholder';
@@ -279,7 +272,6 @@ function renderWinnerActions(){
 function resetRaffle(){
   cancelAnimationFrame(drawFrame);
   drawFrame = 0;
-  nameAnimation?.cancel();
   stopCelebration();
   winnersHistory.clear();
   currentWinner = null;
